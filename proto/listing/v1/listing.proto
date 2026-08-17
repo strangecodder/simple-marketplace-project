@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package listing.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "simple-marketplace-project/gen/listing/v1;listingv1";
+
+service ListingService{
+  rpc GetAllItems(google.protobuf.Empty) returns(AllItemsResponse);
+  rpc GetItemInfo(ItemInfoRequest)returns(ProductItemInfo);
+  rpc CreateNewItem(NewItemRequest) returns (ItemInfoRequest);
+  rpc UpdateProduct(NewItemRequest) returns(google.protobuf.Empty);
+  rpc DeleteItem(ItemInfoRequest) returns (google.protobuf.Empty);
+}
+
+message AllItemsResponse{
+  repeated ShortProductItem items = 1;
+}
+
+message ItemInfoRequest{
+  string itemId = 1;
+}
+
+message NewItemRequest{
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  int64 count = 4;
+  string sellerId = 5;
+}
+
+message ProductItemInfo{
+  string productId = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int64 count = 5;
+}
+
+message ShortProductItem{
+  string productId = 1;
+  double price = 2;
+  int64 count = 3;
+}
