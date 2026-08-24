@@ -16,7 +16,7 @@ services:
       - "5432:5432"
     volumes:
       - listing-pg-data:/var/lib/postgresql/data
-#      - ./sql/listing-db.sql:/docker-entrypoint-initdb.d
+      - ./sql/listing-db.sql:/docker-entrypoint-initdb.d/listing-db.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 3s
@@ -33,7 +33,7 @@ services:
       - "5434:5432"
     volumes:
       - order-pg-data:/var/lib/postgresql/data
-      - ./sql/order-db.sql:/docker-entrypoint-initdb.d
+      - ./sql/order-db.sql:/docker-entrypoint-initdb.d/order-db.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 3s

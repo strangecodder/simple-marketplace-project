@@ -22,6 +22,9 @@ create table product_action
     action_time       timestamp                      not null
 );
 
+-- change_count -> 200
+-- change_count -> 180
+
 alter table product_action
     owner to postgres;
 
