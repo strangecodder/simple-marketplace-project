@@ -7,6 +7,7 @@ import (
 	orderv1 "gen/order/v1"
 	"log"
 	"net"
+	"order-service/internal/handler"
 	"order-service/internal/repository"
 	"simple-marketplace-project/pkg/config"
 	"time"
@@ -41,7 +42,7 @@ func LaunchServer() {
 		log.Fatal(err)
 	}
 	grpcServer := grpc.NewServer()
-	orderv1.RegisterOrderServiceServer(grpcServer, NewServer())
+	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo))
 	if err := grpcServer.Serve(listen); err != nil {
 		log.Fatal(err)
 	}
