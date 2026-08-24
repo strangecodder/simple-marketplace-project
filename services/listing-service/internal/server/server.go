@@ -5,7 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	listingv1 "gen/listing/v1"
-	"listing-service/internal/config"
+	"simple-marketplace-project/pkg/config"
+
 	"listing-service/internal/handler"
 	"listing-service/internal/repository"
 	"log"

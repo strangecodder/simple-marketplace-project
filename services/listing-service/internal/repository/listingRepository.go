@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"listing-service/model"
+	"listing-service/internal/model"
 	"log"
 
 	"github.com/google/uuid"
