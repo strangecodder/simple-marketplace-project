@@ -10,7 +10,7 @@ import (
 type OrderRepository interface {
 	GetOrderProducts(orderId uuid.UUID) ([]model.OrderProduct, error)
 	GetOrderState(orderId uuid.UUID) (string, error)
-	CreateOrder(productId uuid.UUID) (uuid.UUID, error) // тут dto или даже мапа
+	CreateOrder(products []model.OrderProduct) (uuid.UUID, error) // тут dto или даже мапа
 	RejectOrder(orderId uuid.UUID) error
 }
 
@@ -50,7 +50,7 @@ func (o OrderRepositoryImpl) GetOrderState(orderId uuid.UUID) (string, error) {
 	return status, nil
 }
 
-func (o OrderRepositoryImpl) CreateOrder(productId uuid.UUID) (uuid.UUID, error) {
+func (o OrderRepositoryImpl) CreateOrder(products []model.OrderProduct) (uuid.UUID, error) {
 	//TODO implement me
 	panic("implement me")
 }
