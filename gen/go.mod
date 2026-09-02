@@ -1,4 +1,4 @@
-module gen
+module simple-marketplace-project/gen
 
 go 1.25.0
 

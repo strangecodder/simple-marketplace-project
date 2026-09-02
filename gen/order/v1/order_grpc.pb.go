@@ -32,7 +32,7 @@ const (
 type OrderServiceClient interface {
 	GetOrderProducts(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderResponse, error)
 	GetOrderState(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderStateResponse, error)
-	CreateNewOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateNewOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
 	RejectOrder(ctx context.Context, in *RejectOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -64,9 +64,9 @@ func (c *orderServiceClient) GetOrderState(ctx context.Context, in *OrderRequest
 	return out, nil
 }
 
-func (c *orderServiceClient) CreateNewOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *orderServiceClient) CreateNewOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(CreateOrderResponse)
 	err := c.cc.Invoke(ctx, OrderService_CreateNewOrder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (c *orderServiceClient) RejectOrder(ctx context.Context, in *RejectOrderReq
 type OrderServiceServer interface {
 	GetOrderProducts(context.Context, *OrderRequest) (*OrderResponse, error)
 	GetOrderState(context.Context, *OrderRequest) (*OrderStateResponse, error)
-	CreateNewOrder(context.Context, *CreateOrderRequest) (*emptypb.Empty, error)
+	CreateNewOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
 	RejectOrder(context.Context, *RejectOrderRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
@@ -108,7 +108,7 @@ func (UnimplementedOrderServiceServer) GetOrderProducts(context.Context, *OrderR
 func (UnimplementedOrderServiceServer) GetOrderState(context.Context, *OrderRequest) (*OrderStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrderState not implemented")
 }
-func (UnimplementedOrderServiceServer) CreateNewOrder(context.Context, *CreateOrderRequest) (*emptypb.Empty, error) {
+func (UnimplementedOrderServiceServer) CreateNewOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateNewOrder not implemented")
 }
 func (UnimplementedOrderServiceServer) RejectOrder(context.Context, *RejectOrderRequest) (*emptypb.Empty, error) {
