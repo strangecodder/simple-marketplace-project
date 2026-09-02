@@ -10,7 +10,7 @@ option go_package = "simple-marketplace-project/gen/order/v1;orderv1";
 service OrderService{
   rpc GetOrderProducts(OrderRequest) returns(OrderResponse);
   rpc GetOrderState(OrderRequest) returns (OrderStateResponse);
-  rpc CreateNewOrder(CreateOrderRequest) returns (google.protobuf.Empty);
+  rpc CreateNewOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc RejectOrder(RejectOrderRequest) returns (google.protobuf.Empty);
 }
 
@@ -26,13 +26,17 @@ message ProductItem{
   string orderId = 1;
   string name = 2;
   string description = 3;
-  int32 count = 4;
-  int64 pricePerItem = 5;
-  int64 totalPrice = 6;
+  int64 count = 4;
+  double pricePerItem = 5;
+  double totalPrice = 6;
 }
 
 message CreateOrderRequest{
   repeated listing.v1.ShortProductItem products = 1;
+}
+
+message CreateOrderResponse{
+  string orderId = 1;
 }
 
 message OrderStateResponse{
