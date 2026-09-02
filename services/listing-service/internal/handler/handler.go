@@ -2,8 +2,8 @@ package handler
 
 import (
 	"context"
-	listingv1 "gen/listing/v1"
 	"listing-service/internal/repository"
+	listingv1 "simple-marketplace-project/gen/listing/v1"
 
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
