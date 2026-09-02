@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	listingv1 "gen/listing/v1"
+	listingv1 "simple-marketplace-project/gen/listing/v1"
 	"simple-marketplace-project/pkg/config"
 
 	"listing-service/internal/handler"

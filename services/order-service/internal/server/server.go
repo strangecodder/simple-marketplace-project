@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	orderv1 "gen/order/v1"
 	"log"
 	"net"
 	"order-service/internal/handler"
 	"order-service/internal/repository"
+	orderv1 "simple-marketplace-project/gen/order/v1"
 	"simple-marketplace-project/pkg/config"
 	"time"
 
