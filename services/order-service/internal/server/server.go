@@ -10,6 +10,7 @@ import (
 	"order-service/internal/repository"
 	orderv1 "simple-marketplace-project/gen/order/v1"
 	"simple-marketplace-project/pkg/config"
+	"simple-marketplace-project/pkg/rabbit"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -37,12 +38,19 @@ func LaunchServer() {
 	var repo repository.OrderRepository
 	repo = repository.NewOrderRepository(db)
 
+	var rabbitProducer rabbit.RabbitProducer
+
+	rabbitProducer, err := createRabbitClient(&cfg.Rabbit)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		log.Fatal(err)
 	}
 	grpcServer := grpc.NewServer()
-	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo))
+	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo, rabbitProducer))
 	if err := grpcServer.Serve(listen); err != nil {
 		log.Fatal(err)
 	}
@@ -65,4 +73,30 @@ func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func createRabbitClient(cfg *config.RabbitConfig) (*rabbit.RabbitClient, error) {
+	rabbitClient := rabbit.NewRabbitClient()
+
+	err := configureRabbit(context.Background(), rabbitClient)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rabbitClient, nil
+}
+
+func configureRabbit(ctx context.Context, client *rabbit.RabbitClient) error {
+	rabbitErr := client.DeclareQueue("mail-queue")
+
+	if rabbitErr != nil {
+		return rabbitErr
+	}
+
+	//rabbitErr = client.Consume(ctx, "mail-queue", handler.HandleMail)
+	if rabbitErr != nil {
+		return rabbitErr
+	}
+	return nil
 }
