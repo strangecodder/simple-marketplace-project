@@ -1,0 +1,36 @@
+syntax="proto3";
+
+package payment.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "simple-marketplace-project/gen/payment/v1;payment1";
+
+import "google/api/annotations.proto";
+
+// Действия
+// 1. Дать баланс
+// 2. Внести кредит/дебет
+service PaymentService{
+  rpc GetBalance(BalanceRequest) returns (BalanceResponse) {
+    option (google.api.http) = {
+      get: "/v1/payment/balance/{userId}"
+    };
+  }
+  rpc CreateBalanceNote(BalanceNoteRequest) returns(google.protobuf.Empty);
+}
+
+message BalanceRequest{
+  string userId = 1;
+}
+
+message BalanceResponse{
+  double userBalance = 1;
+}
+
+message BalanceNoteRequest{
+  string userId = 1;
+  bool isDebit = 2;
+  double value = 3;
+}
+
