@@ -7,6 +7,7 @@ import (
 	"order-service/internal/repository"
 	listingv1 "simple-marketplace-project/gen/listing/v1"
 	orderv1 "simple-marketplace-project/gen/order/v1"
+	"simple-marketplace-project/pkg/rabbit"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
@@ -15,12 +16,13 @@ import (
 
 type OrderHandler struct {
 	orderv1.OrderServiceServer
-	listingClient listingv1.ListingServiceClient
-	repo          repository.OrderRepository
+	listingClient  listingv1.ListingServiceClient
+	repo           repository.OrderRepository
+	rabbitProducer rabbit.RabbitProducer
 }
 
-func NewHandler(repo repository.OrderRepository) *OrderHandler {
-	return &OrderHandler{repo: repo}
+func NewHandler(repo repository.OrderRepository, rabbitProducer rabbit.RabbitProducer) *OrderHandler {
+	return &OrderHandler{repo: repo, rabbitProducer: rabbitProducer}
 }
 
 func (h *OrderHandler) GetOrderProducts(ctx context.Context, request *orderv1.OrderRequest) (*orderv1.OrderResponse, error) {
