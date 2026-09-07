@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,13 +16,14 @@ type RabbitProducer interface {
 }
 
 type RabbitClient struct {
-	Conn *amqp.Connection
-	Ch   *amqp.Channel
+	Conn   *amqp.Connection
+	Ch     *amqp.Channel
+	logger *slog.Logger
 }
 
-func NewRabbitClient() *RabbitClient {
-	var rabbitClient RabbitClient
-	return &rabbitClient
+func NewRabbitClient(logger *slog.Logger) *RabbitClient {
+	rabbitClient := &RabbitClient{logger: logger}
+	return rabbitClient
 }
 
 func (r *RabbitClient) Connect(url string) error {

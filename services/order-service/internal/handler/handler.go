@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"order-service/internal/model"
 	"order-service/internal/repository"
 	listingv1 "simple-marketplace-project/gen/listing/v1"
@@ -19,19 +20,24 @@ type OrderHandler struct {
 	listingClient  listingv1.ListingServiceClient
 	repo           repository.OrderRepository
 	rabbitProducer rabbit.RabbitProducer
+	logger         *slog.Logger
 }
 
-func NewHandler(repo repository.OrderRepository, rabbitProducer rabbit.RabbitProducer) *OrderHandler {
-	return &OrderHandler{repo: repo, rabbitProducer: rabbitProducer}
+func NewHandler(repo repository.OrderRepository,
+	rabbitProducer rabbit.RabbitProducer,
+	logger *slog.Logger) *OrderHandler {
+	return &OrderHandler{repo: repo, rabbitProducer: rabbitProducer, logger: logger}
 }
 
 func (h *OrderHandler) GetOrderProducts(ctx context.Context, request *orderv1.OrderRequest) (*orderv1.OrderResponse, error) {
 	parsedId, parseErr := uuid.Parse(request.OrderId)
 	if parseErr != nil {
+		h.logger.Error(parseErr.Error())
 		return nil, parseErr
 	}
 	products, err := h.repo.GetOrderProducts(parsedId)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -44,6 +50,7 @@ func (h *OrderHandler) GetOrderProducts(ctx context.Context, request *orderv1.Or
 				ItemId: product.ProductId.String(),
 			})
 			if grpcErr != nil {
+				h.logger.Error(grpcErr.Error())
 				return grpcErr
 			}
 			productInfos[i] = info
@@ -52,6 +59,7 @@ func (h *OrderHandler) GetOrderProducts(ctx context.Context, request *orderv1.Or
 	}
 
 	if err := g.Wait(); err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -78,15 +86,18 @@ func (h *OrderHandler) GetOrderProducts(ctx context.Context, request *orderv1.Or
 func (h *OrderHandler) GetOrderState(ctx context.Context, request *orderv1.OrderRequest) (*orderv1.OrderStateResponse, error) {
 	parsedId, parseErr := uuid.Parse(request.OrderId)
 	if parseErr != nil {
+		h.logger.Error(parseErr.Error())
 		return nil, parseErr
 	}
 	orderStatus, err := h.repo.GetOrderState(parsedId)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 
 	mappedStatus, err := h.mapOrderState(orderStatus)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -104,13 +115,15 @@ func (h *OrderHandler) mapOrderState(s string) (orderv1.OrderState, error) {
 	case "REJECTED":
 		return orderv1.OrderState_REJECTED, nil
 	default:
+		h.logger.Error(s)
 		return 0, fmt.Errorf("unknown order state: %q", s)
 	}
 }
 
 func (h *OrderHandler) CreateNewOrder(ctx context.Context, request *orderv1.CreateOrderRequest) (*orderv1.CreateOrderResponse, error) {
 	createdId, err := h.repo.CreateOrder(h.convertProductsModel(request.Products))
-	if err != nil || createdId == uuid.Nil {
+	if err != nil {
+		h.logger.Error(err.Error())
 		return &orderv1.CreateOrderResponse{}, err
 	}
 
@@ -122,6 +135,7 @@ func (h *OrderHandler) convertProductsModel(requestedItems []*listingv1.ShortPro
 	for i, product := range requestedItems {
 		productIdUUID, err := uuid.Parse(product.ProductId)
 		if err != nil {
+			h.logger.Error(err.Error())
 			return []model.OrderProduct{}
 		}
 		products[i] = model.OrderProduct{ProductId: productIdUUID, Count: product.Count}

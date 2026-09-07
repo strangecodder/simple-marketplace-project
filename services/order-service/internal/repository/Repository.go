@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"log/slog"
 	"order-service/internal/model"
 
 	"github.com/google/uuid"
@@ -15,13 +16,15 @@ type OrderRepository interface {
 }
 
 type OrderRepositoryImpl struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *slog.Logger
 }
 
 func (o OrderRepositoryImpl) GetOrderProducts(orderId uuid.UUID) ([]model.OrderProduct, error) {
 	query := "SELECT po.product_id, po.product_count FROM product_order_count JOIN public.product_order po on po.order_id = product_order_count.product_order_fk WHERE order_id=$1"
 	rows, err := o.db.Query(query, orderId)
 	if err != nil {
+		o.logger.Error(err.Error())
 		return nil, err
 	}
 	defer rows.Close()
@@ -35,6 +38,7 @@ func (o OrderRepositoryImpl) GetOrderProducts(orderId uuid.UUID) ([]model.OrderP
 	}
 
 	if err := rows.Err(); err != nil {
+		o.logger.Error(err.Error())
 		return nil, err
 	}
 	return products, nil
@@ -45,6 +49,7 @@ func (o OrderRepositoryImpl) GetOrderState(orderId uuid.UUID) (string, error) {
 	var status string
 	err := o.db.QueryRow(query, orderId).Scan(&status)
 	if err != nil {
+		o.logger.Error(err.Error())
 		return "", err
 	}
 	return status, nil
@@ -60,6 +65,6 @@ func (o OrderRepositoryImpl) RejectOrder(orderId uuid.UUID) error {
 	panic("implement me")
 }
 
-func NewOrderRepository(db *sql.DB) OrderRepository {
-	return &OrderRepositoryImpl{}
+func NewOrderRepository(db *sql.DB, logger *slog.Logger) OrderRepository {
+	return &OrderRepositoryImpl{db: db, logger: logger}
 }

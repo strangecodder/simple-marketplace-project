@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"os"
 	listingv1 "simple-marketplace-project/gen/listing/v1"
 	"simple-marketplace-project/pkg/config"
 
 	"listing-service/internal/handler"
 	"listing-service/internal/repository"
-	"log"
 	"net"
 	"time"
 
@@ -23,34 +24,41 @@ type Server struct {
 }
 
 func LaunchServer() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	var cfg config.Config
 
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+		panic(err)
 	}
-	db, dbErr := connectDatabase(&cfg.Database)
+	db, dbErr := connectDatabase(&cfg.Database, logger)
 	if dbErr != nil {
-		log.Fatal(dbErr)
+		logger.Error(dbErr.Error())
+		panic(dbErr)
 	}
 	var repo repository.Repository
 	repo = repository.NewRepository(db)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+		panic(err)
 	}
 	grpcServer := grpc.NewServer()
 	listingv1.RegisterListingServiceServer(grpcServer, handler.NewHandler(repo))
 	if err := grpcServer.Serve(listen); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		logger.Error("failed to serve: %s", err.Error())
+		panic(err)
 	}
 }
 
-func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
+func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName, cfg.SSLMode)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
+		logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -59,6 +67,7 @@ func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
+		logger.Error(err.Error())
 		return nil, err
 	}
 

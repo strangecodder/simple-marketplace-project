@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,12 +15,12 @@ import (
 
 type PaymentHandler struct {
 	paymentv1.UnimplementedPaymentServiceServer
-
-	repo repository.PaymentRepository
+	repo   repository.PaymentRepository
+	logger *slog.Logger
 }
 
-func NewPaymentHandler(repo repository.PaymentRepository) *PaymentHandler {
-	return &PaymentHandler{repo: repo}
+func NewPaymentHandler(repo repository.PaymentRepository, logger *slog.Logger) *PaymentHandler {
+	return &PaymentHandler{repo: repo, logger: logger}
 }
 
 func (h *PaymentHandler) GetBalance(ctx context.Context, req *paymentv1.BalanceRequest) (*paymentv1.BalanceResponse, error) {

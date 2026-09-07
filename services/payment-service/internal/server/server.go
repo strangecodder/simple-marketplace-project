@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
+	"os"
 	"payment-service/internal/handler"
 	"payment-service/internal/repository"
 	paymentv1 "simple-marketplace-project/gen/payment/v1"
@@ -21,33 +23,41 @@ type Server struct {
 }
 
 func LaunchServer() {
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	var cfg config.Config
 	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		logger.Error(err.Error())
+		//panic(err)
 		log.Fatal(err)
 	}
-	db, dbError := connectDatabase(&cfg.Database)
+	db, dbError := connectDatabase(&cfg.Database, logger)
 	if dbError != nil {
-		log.Fatal(dbError)
+		logger.Error(dbError.Error())
+		panic(dbError)
 	}
 
 	var paymentRepository repository.PaymentRepository
-	paymentRepository = repository.NewPaymentRepository(db)
+	paymentRepository = repository.NewPaymentRepository(db, logger)
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
 	}
 	grpcServer := grpc.NewServer()
-	paymentv1.RegisterPaymentServiceServer(grpcServer, handler.NewPaymentHandler(paymentRepository))
+	paymentv1.RegisterPaymentServiceServer(grpcServer, handler.NewPaymentHandler(paymentRepository, logger))
 	if err := grpcServer.Serve(listen); err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+		panic(err)
 	}
 }
 
-func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
+func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName, cfg.SSLMode)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
+		logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -56,6 +66,7 @@ func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
+		logger.Error(err.Error())
 		return nil, err
 	}
 

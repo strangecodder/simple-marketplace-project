@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"listing-service/internal/repository"
+	"log/slog"
 	listingv1 "simple-marketplace-project/gen/listing/v1"
 
 	"github.com/google/uuid"
@@ -11,16 +12,18 @@ import (
 
 type Handler struct {
 	listingv1.ListingServiceServer
-	repo repository.Repository
+	repo   repository.Repository
+	logger *slog.Logger
 }
 
-func NewHandler(repo repository.Repository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(repo repository.Repository, logger *slog.Logger) *Handler {
+	return &Handler{repo: repo, logger: logger}
 }
 
 func (h *Handler) GetAllItems(ctx context.Context, empty *emptypb.Empty) (*listingv1.AllItemsResponse, error) {
 	products, err := h.repo.FindAllProducts(ctx)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	var responseArray []*listingv1.ShortProductItem
@@ -33,10 +36,12 @@ func (h *Handler) GetAllItems(ctx context.Context, empty *emptypb.Empty) (*listi
 func (h *Handler) GetItemInfo(ctx context.Context, req *listingv1.ItemInfoRequest) (*listingv1.ProductItemInfo, error) {
 	parseUUID, err := uuid.Parse(req.GetItemId())
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	item, err := h.repo.FindProductById(ctx, parseUUID)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -52,10 +57,12 @@ func (h *Handler) GetItemInfo(ctx context.Context, req *listingv1.ItemInfoReques
 func (h *Handler) CreateNewItem(ctx context.Context, req *listingv1.NewItemRequest) (*listingv1.ItemInfoRequest, error) {
 	parseUUID, err := uuid.Parse(req.SellerId)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	createdId, err := h.repo.CreateProduct(ctx, parseUUID, req.Name, req.Description, req.Price)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	return &listingv1.ItemInfoRequest{ItemId: createdId.String()}, nil
@@ -69,10 +76,12 @@ func (h *Handler) UpdateProduct(ctx context.Context, req *listingv1.NewItemReque
 func (h *Handler) GetAllItemInfo(ctx context.Context, req *listingv1.ItemInfoRequest) (*emptypb.Empty, error) {
 	parseUUID, err := uuid.Parse(req.GetItemId())
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	err = h.repo.DeleteProduct(ctx, parseUUID)
 	if err != nil {
+		h.logger.Error(err.Error())
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
