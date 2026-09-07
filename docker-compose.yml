@@ -74,6 +74,62 @@ services:
       timeout: 5s
       retries: 5
 
+# Сервисы
+  listing-service:
+    build:
+      context: ./services/listing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - "df"
+    depends_on:
+      - listing-db
+    restart: unless-stopped
+
+  notification-service:
+     build:
+       context: ./services/notification-service
+       dockerfile: Dockerfile
+     ports:
+       - "8081:8080"
+     environment:
+       - ""
+     depends_on:
+       - rabbitmq
+     restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      - ""
+    depends_on:
+      order-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "/bin/grpc_health_probe", "-addr=:50051" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    depends_on:
+      - payment-db
+    restart: unless-stopped
+
+
 volumes:
   listing-pg-data:
   order-pg-data:
