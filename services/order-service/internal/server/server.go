@@ -15,7 +15,10 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type Server struct {
@@ -45,18 +48,25 @@ func LaunchServer() {
 
 	var rabbitProducer rabbit.RabbitProducer
 
-	rabbitProducer, err := createRabbitClient(&cfg.Rabbit, logger)
-	if err != nil {
-		logger.Error(err.Error())
-		panic(err)
-	}
-
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		logger.Error(err.Error())
 		panic(err)
 	}
+
 	grpcServer := grpc.NewServer()
+
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	// изначально NOT_SERVING — сервер поднят, но Rabbit ещё не готов
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
+	rabbitProducer, rabbitErr := createRabbitClient(&cfg.Rabbit, logger)
+	if rabbitErr != nil {
+		logger.Error(rabbitErr.Error())
+		panic(rabbitErr)
+	}
+
 	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo, rabbitProducer, logger))
 	if err := grpcServer.Serve(listen); err != nil {
 		slog.Error(err.Error())
@@ -103,4 +113,19 @@ func createRabbitClient(cfg *config.RabbitConfig, logger *slog.Logger) (*rabbit.
 	}
 
 	return rabbitClient, nil
+}
+
+func connectRabbitWithRetry(dsn string, logger *slog.Logger) (*amqp.Connection, error) {
+	var conn *amqp.Connection
+	var err error
+
+	for i := 0; i < 10; i++ {
+		conn, err = amqp.Dial(dsn)
+		if err == nil {
+			return conn, nil
+		}
+		logger.Warn("rabbit not ready, retrying", "attempt", i+1, "err", err)
+		time.Sleep(2 * time.Second)
+	}
+	return nil, err
 }
