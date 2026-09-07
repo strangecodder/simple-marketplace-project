@@ -38,7 +38,7 @@ func LaunchServer() {
 		panic(dbErr)
 	}
 	var repo repository.Repository
-	repo = repository.NewRepository(db)
+	repo = repository.NewRepository(db, logger)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
@@ -46,7 +46,7 @@ func LaunchServer() {
 		panic(err)
 	}
 	grpcServer := grpc.NewServer()
-	listingv1.RegisterListingServiceServer(grpcServer, handler.NewHandler(repo))
+	listingv1.RegisterListingServiceServer(grpcServer, handler.NewHandler(repo, logger))
 	if err := grpcServer.Serve(listen); err != nil {
 		logger.Error("failed to serve: %s", err.Error())
 		panic(err)
