@@ -1,10 +1,4 @@
 services:
-#  postgres 1
-#  postgres 2
-#  postgres 3
-#  kafka
-#  network
-#
 
   listing-db:
     image: postgres:15
@@ -18,7 +12,7 @@ services:
       - listing-pg-data:/var/lib/postgresql/data
       - ./sql/listing-db.sql:/docker-entrypoint-initdb.d/listing-db.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d listingDB"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -35,7 +29,7 @@ services:
       - order-pg-data:/var/lib/postgresql/data
       - ./sql/order-db.sql:/docker-entrypoint-initdb.d/order-db.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orderDB"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -45,14 +39,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: orderDB
+      POSTGRES_DB: paymentDB
     ports:
-      - "5436:5436"
+      - "5436:5432"
     volumes:
-      - order-pg-data:/var/lib/postgresql/data
+      - payment-pg-data:/var/lib/postgresql/data
       - ./sql/payment-db.sql:/docker-entrypoint-initdb.d/payment-db.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paymentDB"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -74,50 +68,40 @@ services:
       timeout: 5s
       retries: 5
 
-# Сервисы
+  # Сервисы
   listing-service:
     build:
       context: ./services/listing-service
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-    environment:
-      - "df"
     depends_on:
-      - listing-db
-    restart: unless-stopped
-
-  notification-service:
-     build:
-       context: ./services/notification-service
-       dockerfile: Dockerfile
-     ports:
-       - "8081:8080"
-     environment:
-       - ""
-     depends_on:
-       - rabbitmq
-     restart: unless-stopped
-
-  order-service:
-    build:
-      context: ./services/order-service
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8080"
-    environment:
-      - ""
-    depends_on:
-      order-db:
-        condition: service_started
-      rabbitmq:
+      listing-db:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "/bin/grpc_health_probe", "-addr=:50051" ]
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:8080"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   payment-service:
     build:
@@ -126,11 +110,42 @@ services:
     ports:
       - "8083:8080"
     depends_on:
-      - payment-db
+      payment-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    depends_on:
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      listing-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 
 volumes:
   listing-pg-data:
   order-pg-data:
+  payment-pg-data:
   rabbitmq_data:
