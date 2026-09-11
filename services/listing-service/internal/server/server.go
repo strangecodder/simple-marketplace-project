@@ -17,6 +17,8 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type Server struct {
@@ -32,6 +34,18 @@ func LaunchServer() {
 		logger.Error(err.Error())
 		panic(err)
 	}
+
+	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
+	if err != nil {
+		logger.Error(err.Error())
+		panic(err)
+	}
+	grpcServer := grpc.NewServer()
+
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
 	db, dbErr := connectDatabase(&cfg.Database, logger)
 	if dbErr != nil {
 		logger.Error(dbErr.Error())
@@ -40,13 +54,8 @@ func LaunchServer() {
 	var repo repository.Repository
 	repo = repository.NewRepository(db, logger)
 
-	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
-	if err != nil {
-		logger.Error(err.Error())
-		panic(err)
-	}
-	grpcServer := grpc.NewServer()
 	listingv1.RegisterListingServiceServer(grpcServer, handler.NewHandler(repo, logger))
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	if err := grpcServer.Serve(listen); err != nil {
 		logger.Error("failed to serve: %s", err.Error())
 		panic(err)

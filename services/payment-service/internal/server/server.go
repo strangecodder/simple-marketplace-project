@@ -16,6 +16,8 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type Server struct {
@@ -32,6 +34,17 @@ func LaunchServer() {
 		//panic(err)
 		log.Fatal(err)
 	}
+
+	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	grpcServer := grpc.NewServer()
+
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
 	db, dbError := connectDatabase(&cfg.Database, logger)
 	if dbError != nil {
 		logger.Error(dbError.Error())
@@ -40,12 +53,10 @@ func LaunchServer() {
 
 	var paymentRepository repository.PaymentRepository
 	paymentRepository = repository.NewPaymentRepository(db, logger)
-	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	grpcServer := grpc.NewServer()
+
 	paymentv1.RegisterPaymentServiceServer(grpcServer, handler.NewPaymentHandler(paymentRepository, logger))
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
 	if err := grpcServer.Serve(listen); err != nil {
 		logger.Error(err.Error())
 		panic(err)

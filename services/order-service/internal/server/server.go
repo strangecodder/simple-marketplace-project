@@ -37,16 +37,6 @@ func LaunchServer() {
 		logger.Error(err.Error())
 		panic(err)
 	}
-	db, dbError := connectDatabase(&cfg.Database, logger)
-	if dbError != nil {
-		logger.Error(dbError.Error())
-		panic(dbError.Error())
-	}
-
-	var repo repository.OrderRepository
-	repo = repository.NewOrderRepository(db, logger)
-
-	var rabbitProducer rabbit.RabbitProducer
 
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
@@ -58,14 +48,25 @@ func LaunchServer() {
 
 	healthServer := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
-	// изначально NOT_SERVING — сервер поднят, но Rabbit ещё не готов
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
+	var rabbitProducer rabbit.RabbitProducer
 	rabbitProducer, rabbitErr := createRabbitClient(&cfg.Rabbit, logger)
 	if rabbitErr != nil {
 		logger.Error(rabbitErr.Error())
 		panic(rabbitErr)
 	}
+
+	db, dbError := connectDatabase(&cfg.Database, logger)
+	if dbError != nil {
+		logger.Error(dbError.Error())
+		panic(dbError.Error())
+	}
+
+	var repo repository.OrderRepository
+	repo = repository.NewOrderRepository(db, logger)
+
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo, rabbitProducer, logger))
 	if err := grpcServer.Serve(listen); err != nil {
