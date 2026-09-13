@@ -24,6 +24,7 @@ const (
 	OrderService_GetOrderState_FullMethodName    = "/order.v1.OrderService/GetOrderState"
 	OrderService_CreateNewOrder_FullMethodName   = "/order.v1.OrderService/CreateNewOrder"
 	OrderService_RejectOrder_FullMethodName      = "/order.v1.OrderService/RejectOrder"
+	OrderService_PayOrder_FullMethodName         = "/order.v1.OrderService/PayOrder"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -34,6 +35,7 @@ type OrderServiceClient interface {
 	GetOrderState(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderStateResponse, error)
 	CreateNewOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
 	RejectOrder(ctx context.Context, in *RejectOrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PayOrder(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type orderServiceClient struct {
@@ -84,6 +86,16 @@ func (c *orderServiceClient) RejectOrder(ctx context.Context, in *RejectOrderReq
 	return out, nil
 }
 
+func (c *orderServiceClient) PayOrder(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, OrderService_PayOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
@@ -92,6 +104,7 @@ type OrderServiceServer interface {
 	GetOrderState(context.Context, *OrderRequest) (*OrderStateResponse, error)
 	CreateNewOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
 	RejectOrder(context.Context, *RejectOrderRequest) (*emptypb.Empty, error)
+	PayOrder(context.Context, *OrderRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -113,6 +126,9 @@ func (UnimplementedOrderServiceServer) CreateNewOrder(context.Context, *CreateOr
 }
 func (UnimplementedOrderServiceServer) RejectOrder(context.Context, *RejectOrderRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RejectOrder not implemented")
+}
+func (UnimplementedOrderServiceServer) PayOrder(context.Context, *OrderRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method PayOrder not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -207,6 +223,24 @@ func _OrderService_RejectOrder_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_PayOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).PayOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_PayOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).PayOrder(ctx, req.(*OrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -229,6 +263,10 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RejectOrder",
 			Handler:    _OrderService_RejectOrder_Handler,
+		},
+		{
+			MethodName: "PayOrder",
+			Handler:    _OrderService_PayOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

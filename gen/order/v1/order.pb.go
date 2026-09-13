@@ -463,12 +463,13 @@ const file_order_v1_order_proto_rawDesc = "" +
 	"\aCREATED\x10\x00\x12\r\n" +
 	"\tWAIT_PAID\x10\x01\x12\b\n" +
 	"\x04PAID\x10\x02\x12\f\n" +
-	"\bREJECTED\x10\x032\xae\x02\n" +
+	"\bREJECTED\x10\x032\xea\x02\n" +
 	"\fOrderService\x12C\n" +
 	"\x10GetOrderProducts\x12\x16.order.v1.OrderRequest\x1a\x17.order.v1.OrderResponse\x12E\n" +
 	"\rGetOrderState\x12\x16.order.v1.OrderRequest\x1a\x1c.order.v1.OrderStateResponse\x12M\n" +
 	"\x0eCreateNewOrder\x12\x1c.order.v1.CreateOrderRequest\x1a\x1d.order.v1.CreateOrderResponse\x12C\n" +
-	"\vRejectOrder\x12\x1c.order.v1.RejectOrderRequest\x1a\x16.google.protobuf.EmptyB1Z/simple-marketplace-project/gen/order/v1;orderv1b\x06proto3"
+	"\vRejectOrder\x12\x1c.order.v1.RejectOrderRequest\x1a\x16.google.protobuf.Empty\x12:\n" +
+	"\bPayOrder\x12\x16.order.v1.OrderRequest\x1a\x16.google.protobuf.EmptyB1Z/simple-marketplace-project/gen/order/v1;orderv1b\x06proto3"
 
 var (
 	file_order_v1_order_proto_rawDescOnce sync.Once
@@ -504,12 +505,14 @@ var file_order_v1_order_proto_depIdxs = []int32{
 	1, // 4: order.v1.OrderService.GetOrderState:input_type -> order.v1.OrderRequest
 	4, // 5: order.v1.OrderService.CreateNewOrder:input_type -> order.v1.CreateOrderRequest
 	7, // 6: order.v1.OrderService.RejectOrder:input_type -> order.v1.RejectOrderRequest
-	2, // 7: order.v1.OrderService.GetOrderProducts:output_type -> order.v1.OrderResponse
-	6, // 8: order.v1.OrderService.GetOrderState:output_type -> order.v1.OrderStateResponse
-	5, // 9: order.v1.OrderService.CreateNewOrder:output_type -> order.v1.CreateOrderResponse
-	9, // 10: order.v1.OrderService.RejectOrder:output_type -> google.protobuf.Empty
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
+	1, // 7: order.v1.OrderService.PayOrder:input_type -> order.v1.OrderRequest
+	2, // 8: order.v1.OrderService.GetOrderProducts:output_type -> order.v1.OrderResponse
+	6, // 9: order.v1.OrderService.GetOrderState:output_type -> order.v1.OrderStateResponse
+	5, // 10: order.v1.OrderService.CreateNewOrder:output_type -> order.v1.CreateOrderResponse
+	9, // 11: order.v1.OrderService.RejectOrder:output_type -> google.protobuf.Empty
+	9, // 12: order.v1.OrderService.PayOrder:output_type -> google.protobuf.Empty
+	8, // [8:13] is the sub-list for method output_type
+	3, // [3:8] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
 	3, // [3:3] is the sub-list for extension extendee
 	0, // [0:3] is the sub-list for field type_name
