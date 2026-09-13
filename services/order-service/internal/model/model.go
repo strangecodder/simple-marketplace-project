@@ -9,3 +9,18 @@ type OrderProduct struct {
 
 type CreateProductsDto struct {
 }
+
+type Order struct {
+	OrderID uuid.UUID
+	UserID  uuid.UUID
+}
+
+type UserOrderTotal struct {
+	UserID uuid.UUID
+	Total  int64
+}
+
+type ProductCount struct {
+	ProductId uuid.UUID
+	Count     int64
+}
