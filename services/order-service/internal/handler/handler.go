@@ -2,27 +2,33 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"order-service/internal/model"
 	"order-service/internal/repository"
 	listingv1 "simple-marketplace-project/gen/listing/v1"
 	orderv1 "simple-marketplace-project/gen/order/v1"
+	paymentv1 "simple-marketplace-project/gen/payment/v1"
 	"simple-marketplace-project/pkg/rabbit"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type OrderHandler struct {
 	orderv1.OrderServiceServer
 	listingClient  listingv1.ListingServiceClient
+	paymentClient  paymentv1.PaymentServiceClient
 	repo           repository.OrderRepository
 	rabbitProducer rabbit.RabbitProducer
 	logger         *slog.Logger
 }
 
+// todo: добавить клиентов
 func NewHandler(repo repository.OrderRepository,
 	rabbitProducer rabbit.RabbitProducer,
 	logger *slog.Logger) *OrderHandler {
@@ -146,4 +152,74 @@ func (h *OrderHandler) convertProductsModel(requestedItems []*listingv1.ShortPro
 // todo: добавить отмену заказа
 func (h *OrderHandler) RejectOrder(ctx context.Context, request *orderv1.RejectOrderRequest) (*emptypb.Empty, error) {
 	panic("implement me")
+}
+
+func (h *OrderHandler) PayOrder(ctx context.Context, request *orderv1.OrderRequest) (*emptypb.Empty, error) {
+	orderId, parseErr := uuid.Parse(request.OrderId)
+	if parseErr != nil {
+		h.logger.Error(parseErr.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "invalid orderId: %v", parseErr)
+	}
+
+	order, err := h.repo.GetOrderById(ctx, orderId)
+	if err != nil {
+		h.logger.Error(err.Error())
+		if errors.Is(err, errors.New("order not found")) {
+			return nil, status.Error(codes.NotFound, "order not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get order: %v", err)
+	}
+
+	counts, err := h.repo.GetUnpaidProductCounts(ctx, order.UserID)
+	if err != nil {
+		h.logger.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to get unpaid products: %v", err)
+	}
+	if len(counts) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "no unpaid orders")
+	}
+
+	productInfos := make([]*listingv1.ProductItemInfo, len(counts))
+	g, gCtx := errgroup.WithContext(ctx)
+	for i, c := range counts {
+		g.Go(func() error {
+			info, grpcErr := h.listingClient.GetItemInfo(gCtx, &listingv1.ItemInfoRequest{
+				ItemId: c.ProductId.String(),
+			})
+			if grpcErr != nil {
+				h.logger.Error(grpcErr.Error())
+				return grpcErr
+			}
+			productInfos[i] = info
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to fetch product info: %v", err)
+	}
+
+	var totalValue float64
+	for i, c := range counts {
+		totalValue += productInfos[i].Price * float64(c.Count)
+	}
+
+	_, err = h.paymentClient.CreateBalanceNote(ctx, &paymentv1.BalanceNoteRequest{
+		UserId:  order.UserID.String(),
+		IsDebit: false,
+		Value:   totalValue,
+	})
+	if err != nil {
+		if status.Code(err) == codes.FailedPrecondition {
+			return nil, status.Error(codes.FailedPrecondition, "insufficient balance, please top up your account")
+		}
+		h.logger.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "payment failed: %v", err)
+	}
+
+	if err := h.repo.MarkOrdersPaid(ctx, order.UserID); err != nil {
+		h.logger.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "payment succeeded but failed to update order status: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
 }
