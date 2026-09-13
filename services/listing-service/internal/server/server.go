@@ -14,6 +14,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/ilyakaznacheev/cleanenv"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -46,7 +48,7 @@ func LaunchServer() {
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
-	db, dbErr := connectDatabase(&cfg.Database, logger)
+	db, dbErr := connectDatabase(&cfg.Database)
 	if dbErr != nil {
 		logger.Error(dbErr.Error())
 		panic(dbErr)
@@ -62,12 +64,11 @@ func LaunchServer() {
 	}
 }
 
-func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error) {
+func connectDatabase(cfg *config.DBConfig) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName, cfg.SSLMode)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
-		logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -76,9 +77,33 @@ func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		logger.Error(err.Error())
+		return nil, err
+	}
+
+	migrationErr := runMigrations(db, cfg.MigrationPath)
+	if migrationErr != nil {
 		return nil, err
 	}
 
 	return db, nil
+}
+
+func runMigrations(db *sql.DB, sourceUrl string) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		sourceUrl,
+		"postgres", driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }

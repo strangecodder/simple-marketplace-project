@@ -14,6 +14,8 @@ import (
 	"simple-marketplace-project/pkg/rabbit"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/ilyakaznacheev/cleanenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
@@ -70,7 +72,7 @@ func LaunchServer() {
 
 	orderv1.RegisterOrderServiceServer(grpcServer, handler.NewHandler(repo, rabbitProducer, logger))
 	if err := grpcServer.Serve(listen); err != nil {
-		slog.Error(err.Error())
+		logger.Error(err.Error())
 		panic(err)
 	}
 }
@@ -80,7 +82,6 @@ func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error)
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName, cfg.SSLMode)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
-		logger.Error(err.Error())
 		return nil, err
 	}
 
@@ -89,11 +90,36 @@ func connectDatabase(cfg *config.DBConfig, logger *slog.Logger) (*sql.DB, error)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		logger.Error(err.Error())
+		return nil, err
+	}
+
+	migrationErr := runMigrations(db, cfg.MigrationPath)
+	if migrationErr != nil {
 		return nil, err
 	}
 
 	return db, nil
+}
+
+func runMigrations(db *sql.DB, sourceUrl string) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+
+	// todo:
+	m, err := migrate.NewWithDatabaseInstance(
+		sourceUrl,
+		"postgres", driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
 func createRabbitClient(cfg *config.RabbitConfig, logger *slog.Logger) (*rabbit.RabbitClient, error) {
