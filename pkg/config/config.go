@@ -26,6 +26,8 @@ type DBConfig struct {
 	Password string `yaml:"password" env:"DB_PASSWORD" env-default:"postgres"`
 	DBName   string `yaml:"dbname" env:"DB_NAME" env-default:"postgres"`
 	SSLMode  string `yaml:"sslmode" env:"DB_SSLMODE" env-default:"disable"`
+
+	MigrationPath string `yaml:"migration_path" env:"DB_MIGRATION_PATH"`
 }
 
 type ServerConfig struct {
