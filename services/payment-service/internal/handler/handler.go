@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -28,7 +29,7 @@ func (h *PaymentHandler) GetBalance(ctx context.Context, req *paymentv1.BalanceR
 		return nil, status.Error(codes.InvalidArgument, "userId is required")
 	}
 
-	balance, err := h.repo.GetBalance(req.GetUserId())
+	balance, err := h.repo.GetBalance(ctx, req.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get balance: %v", err))
 	}
@@ -46,9 +47,12 @@ func (h *PaymentHandler) CreateBalanceNote(ctx context.Context, req *paymentv1.B
 		return nil, status.Error(codes.InvalidArgument, "value must be positive")
 	}
 
-	err := h.repo.CreatePayment(req.GetUserId(), req.GetIsDebit(), req.GetValue())
+	err := h.repo.CreatePayment(ctx, req.GetUserId(), req.GetIsDebit(), req.GetValue())
 	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to create balance note: %v", err))
+		if errors.Is(err, errors.New("insufficient funds")) {
+			return nil, status.Error(codes.FailedPrecondition, "insufficient balance")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create balance note: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil
