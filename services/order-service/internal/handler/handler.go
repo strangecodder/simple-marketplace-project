@@ -164,7 +164,7 @@ func (h *OrderHandler) PayOrder(ctx context.Context, request *orderv1.OrderReque
 	order, err := h.repo.GetOrderById(ctx, orderId)
 	if err != nil {
 		h.logger.Error(err.Error())
-		if errors.Is(err, errors.New("order not found")) {
+		if errors.Is(err, repository.ErrOrderNotFound) {
 			return nil, status.Error(codes.NotFound, "order not found")
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get order: %v", err)

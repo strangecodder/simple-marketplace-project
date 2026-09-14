@@ -49,7 +49,7 @@ func (h *PaymentHandler) CreateBalanceNote(ctx context.Context, req *paymentv1.B
 
 	err := h.repo.CreatePayment(ctx, req.GetUserId(), req.GetIsDebit(), req.GetValue())
 	if err != nil {
-		if errors.Is(err, errors.New("insufficient funds")) {
+		if errors.Is(err, repository.ErrInsufficientBalance) {
 			return nil, status.Error(codes.FailedPrecondition, "insufficient balance")
 		}
 		return nil, status.Errorf(codes.Internal, "failed to create balance note: %v", err)

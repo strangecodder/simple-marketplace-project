@@ -8,6 +8,8 @@ import (
 	"log/slog"
 )
 
+var ErrInsufficientBalance = errors.New("insufficient balance")
+
 type PaymentRepository interface {
 	GetBalance(ctx context.Context, userId string) (balance float64, err error)
 	CreatePayment(ctx context.Context, userId string, isDebit bool, value float64) error
@@ -59,7 +61,7 @@ func (p *PaymentRepositoryImpl) CreatePayment(ctx context.Context, userId string
 		}
 
 		if balance < amount {
-			return errors.New("insufficient balance")
+			return ErrInsufficientBalance
 		}
 	}
 

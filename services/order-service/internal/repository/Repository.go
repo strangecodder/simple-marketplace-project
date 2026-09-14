@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrOrderNotFound = errors.New("order not found")
+
 type OrderRepository interface {
 	GetOrderProducts(orderId uuid.UUID) ([]model.OrderProduct, error)
 	GetOrderState(orderId uuid.UUID) (string, error)
@@ -106,7 +108,7 @@ func (o *OrderRepositoryImpl) GetOrderById(ctx context.Context, orderId uuid.UUI
 	`, orderId).Scan(&order.OrderID, &order.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("order not found")
+			return nil, ErrOrderNotFound
 		}
 		return nil, err
 	}
